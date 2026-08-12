@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - engine: sqlite
+    schema: internal/store/migrations
+    queries: internal/store/queries.sql
+    gen:
+      go:
+        package: catalogdb
+        out: internal/store/catalogdb
+        emit_json_tags: true
+        emit_empty_slices: true

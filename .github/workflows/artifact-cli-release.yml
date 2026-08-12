@@ -1,0 +1,125 @@
+name: Artifact CLI Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/published-artifact/cmd/artifact-cli/**"
+      - "apps/published-artifact/internal/apiclient/**"
+      - "apps/published-artifact/internal/sourcearchive/**"
+      - "apps/published-artifact/internal/archive/**"
+      - "apps/published-artifact/internal/httpapi/**"
+      - "apps/published-artifact/internal/names/**"
+      - "apps/published-artifact/internal/store/**"
+      - "apps/published-artifact/install.sh"
+      - "apps/published-artifact/publish-release.sh"
+      - "apps/published-artifact/tests/**"
+      - "apps/published-artifact/package.json"
+      - "apps/published-artifact/go.mod"
+      - "apps/published-artifact/go.sum"
+      - ".changeset/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/artifact-cli-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: artifact-cli-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: homelab-linux-x64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/published-artifact/go.mod
+          cache-dependency-path: apps/published-artifact/go.sum
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install release dependencies
+        run: npm ci
+
+      - name: Build CLI before tests
+        working-directory: apps/published-artifact
+        run: |
+          version=$(node -p "require('./package.json').version")
+          go build -trimpath -ldflags "-X main.version=${version}" -o "$RUNNER_TEMP/artifact" ./cmd/artifact-cli
+
+      - name: Test CLI compatibility
+        working-directory: apps/published-artifact
+        env:
+          ARTIFACT_CLI_BINARY: ${{ runner.temp }}/artifact
+        run: go test ./cmd/artifact-cli ./internal/apiclient ./internal/sourcearchive
+
+      - name: Test installer
+        run: apps/published-artifact/tests/install_test.sh
+
+      - name: Build release assets
+        working-directory: apps/published-artifact
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          mkdir -p "$RUNNER_TEMP/artifact-release"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=${version}" -o "$RUNNER_TEMP/artifact-release/artifact-linux-x64" ./cmd/artifact-cli
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w -X main.version=${version}" -o "$RUNNER_TEMP/artifact-release/artifact-linux-arm64" ./cmd/artifact-cli
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=${version}" -o "$RUNNER_TEMP/artifact-release/artifact-darwin-x64" ./cmd/artifact-cli
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "-s -w -X main.version=${version}" -o "$RUNNER_TEMP/artifact-release/artifact-darwin-arm64" ./cmd/artifact-cli
+
+      - name: Create release pull request or GitHub Release
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1
+        with:
+          version: npm exec changeset version
+          publish: apps/published-artifact/publish-release.sh
+          title: "chore: release artifact CLI"
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find release for this revision
+        id: release
+        run: |
+          version=$(node -p "require('./apps/published-artifact/package.json').version")
+          tag="artifact-v${version}"
+          if target=$(gh release view "$tag" --json targetCommitish --jq '.targetCommitish' 2>/dev/null) && [[ "$target" == "$GITHUB_SHA" ]]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        if: steps.release.outputs.active == 'true'
+        run: gh release upload "${{ steps.release.outputs.tag }}" "$RUNNER_TEMP"/artifact-release/artifact-* --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify and publish complete release
+        if: steps.release.outputs.active == 'true'
+        run: |
+          set -euo pipefail
+          tag="${{ steps.release.outputs.tag }}"
+          expected=$(printf '%s\n' artifact-darwin-arm64 artifact-darwin-x64 artifact-linux-arm64 artifact-linux-x64)
+          actual=$(gh release view "$tag" --json assets --jq '.assets[].name' | sort)
+          [[ "$actual" == "$expected" ]]
+          gh release edit "$tag" --draft=false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

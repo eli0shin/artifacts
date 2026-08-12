@@ -1,0 +1,28 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+terraform/envs/*/state/
+terraform/envs/*/plans/
+crash.log
+crash.*.log
+
+# Talos generated secrets/configs
+talos/generated/
+
+# Local env
+.env
+.local/
+.DS_Store
+
+# Terraform local plan files
+**/tfplan*
+
+# Python and Node.js dependencies
+__pycache__/
+node_modules/
+
+# ESPHome local secrets
+esphome/secrets.yaml

@@ -73,7 +73,7 @@ jobs:
   publish:
     needs: verify
     permissions:
-      contents: read
+      contents: write
       packages: write
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -88,13 +88,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare server version
+        run: |
+          set -euo pipefail
+          current=$(<apps/published-artifact/SERVER_VERSION)
+          [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          IFS=. read -r major minor patch <<< "$current"
+          version="$major.$minor.$((patch + 1))"
+          printf '%s\n' "$version" > apps/published-artifact/SERVER_VERSION
+          printf 'SERVER_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/published-artifact/SERVER_VERSION
+          git commit -m "chore: release artifact server v${version}"
+          git tag "v${version}"
+
       - name: Build publication image
         run: |
           docker build --pull \
             --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --tag "$IMAGE_NAME:sha-${GITHUB_SHA}" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
+            --tag "$IMAGE_NAME:v${SERVER_VERSION}" \
             apps/published-artifact
 
       - name: Publish image
-        run: docker push "$IMAGE_NAME:sha-${GITHUB_SHA}"
+        run: docker push "$IMAGE_NAME:v${SERVER_VERSION}"
+
+      - name: Publish server version
+        run: git push --atomic origin HEAD:main "v${SERVER_VERSION}"

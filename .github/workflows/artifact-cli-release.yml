@@ -8,6 +8,7 @@ on:
       - "apps/published-artifact/internal/apiclient/**"
       - "apps/published-artifact/internal/sourcearchive/**"
       - "apps/published-artifact/internal/archive/**"
+      - "apps/published-artifact/internal/cliconfig/**"
       - "apps/published-artifact/internal/httpapi/**"
       - "apps/published-artifact/internal/names/**"
       - "apps/published-artifact/internal/store/**"
@@ -65,7 +66,7 @@ jobs:
         working-directory: apps/published-artifact
         env:
           ARTIFACT_CLI_BINARY: ${{ runner.temp }}/artifact
-        run: go test ./cmd/artifact-cli ./internal/apiclient ./internal/sourcearchive
+        run: go test ./cmd/artifact-cli ./internal/apiclient ./internal/cliconfig ./internal/sourcearchive
 
       - name: Test installer
         run: apps/published-artifact/tests/install_test.sh

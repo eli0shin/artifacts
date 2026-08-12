@@ -60,9 +60,17 @@ curl -fsSL https://raw.githubusercontent.com/eli0shin/artifacts/main/apps/publis
 
 The installer selects the current Linux or macOS x64 or arm64 release asset and installs it at `$HOME/.local/bin/artifact`. Add `$HOME/.local/bin` to `PATH` if the installer reports that it is missing.
 
-Commands always use `https://artifacts.home.arpa`:
+Configure the service URL after installation:
+
+```sh
+artifact config set-url https://artifacts.example.com
+```
+
+The CLI reads `${XDG_CONFIG_HOME:-$HOME/.config}/artifact/config.json`. `ARTIFACT_CONFIG_PATH` selects a different file, and `ARTIFACT_SERVICE_URL` overrides the configured URL. There is no default URL.
 
 ```text
+artifact config set-url <url>
+artifact config get-url
 artifact publish <path> [--name <name>]
 artifact list
 artifact inspect <name>

@@ -39,6 +39,70 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestConfigSetAndGetURL(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "nested", "config.json")
+	t.Setenv("ARTIFACT_CONFIG_PATH", configPath)
+	t.Setenv("ARTIFACT_SERVICE_URL", "")
+
+	var stdout strings.Builder
+	if err := execute(t.Context(), []string{"config", "set-url", "not-validated"}, &stdout); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != "" {
+		t.Fatalf("set-url output = %q", stdout.String())
+	}
+	contents, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "{\"service_url\":\"not-validated\"}\n" {
+		t.Fatalf("config contents = %q", contents)
+	}
+
+	if err := execute(t.Context(), []string{"config", "get-url"}, &stdout); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != "not-validated\n" {
+		t.Fatalf("get-url output = %q", stdout.String())
+	}
+}
+
+func TestEnvironmentServiceURLOverridesConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	t.Setenv("ARTIFACT_CONFIG_PATH", configPath)
+	t.Setenv("ARTIFACT_SERVICE_URL", "from-environment")
+	if err := os.WriteFile(configPath, []byte(`{"service_url":"from-file"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout strings.Builder
+	if err := execute(t.Context(), []string{"config", "get-url"}, &stdout); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != "from-environment\n" {
+		t.Fatalf("get-url output = %q", stdout.String())
+	}
+}
+
+func TestNetworkCommandRequiresServiceURL(t *testing.T) {
+	t.Setenv("ARTIFACT_CONFIG_PATH", filepath.Join(t.TempDir(), "missing.json"))
+	t.Setenv("ARTIFACT_SERVICE_URL", "")
+	if err := execute(t.Context(), []string{"list"}, io.Discard); err == nil {
+		t.Fatal("list succeeded without a service URL")
+	}
+}
+
+func TestInvalidCommandDoesNotRequireConfiguration(t *testing.T) {
+	t.Setenv("ARTIFACT_CONFIG_PATH", filepath.Join(t.TempDir(), "missing.json"))
+	t.Setenv("ARTIFACT_SERVICE_URL", "")
+	if err := execute(t.Context(), []string{"unknown"}, io.Discard); err == nil || err.Error() != `unknown command "unknown"` {
+		t.Fatalf("unknown command error = %v", err)
+	}
+	if err := execute(t.Context(), []string{"list", "extra"}, io.Discard); err == nil || err.Error() != "usage: artifact list" {
+		t.Fatalf("invalid list error = %v", err)
+	}
+}
+
 func TestPublishPrintsResultingURLAndServesSourceTree(t *testing.T) {
 	serviceURL := startArtifactService(t)
 	source := t.TempDir()
@@ -277,7 +341,7 @@ func startArtifactServiceWith(t *testing.T, configure func(*httpapi.Server)) str
 func runArtifact(t *testing.T, serviceURL string, arguments ...string) (string, string, int) {
 	t.Helper()
 	command := exec.CommandContext(context.Background(), artifactBinary, arguments...)
-	command.Env = append(os.Environ(), "_ARTIFACT_SERVICE_URL="+serviceURL)
+	command.Env = append(os.Environ(), "ARTIFACT_SERVICE_URL="+serviceURL)
 	var stdout strings.Builder
 	var stderr strings.Builder
 	command.Stdout = &stdout

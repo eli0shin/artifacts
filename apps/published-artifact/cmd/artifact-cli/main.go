@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/apiclient"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/cliconfig"
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/sourcearchive"
 )
-
-const defaultServiceURL = "https://artifacts.home.arpa"
 
 var version = "dev"
 
@@ -34,7 +33,17 @@ func execute(ctx context.Context, arguments []string, stdout io.Writer) error {
 	if len(arguments) == 0 {
 		return errors.New("usage: artifact <command> [arguments]")
 	}
-	client := apiclient.New(serviceURL())
+	if arguments[0] == "config" {
+		return executeConfig(arguments[1:], stdout)
+	}
+	if err := validateNetworkCommand(arguments); err != nil {
+		return err
+	}
+	serviceURL, err := serviceURL()
+	if err != nil {
+		return err
+	}
+	client := apiclient.New(serviceURL)
 	switch arguments[0] {
 	case "list":
 		if len(arguments) != 1 {
@@ -128,6 +137,45 @@ func execute(ctx context.Context, arguments []string, stdout io.Writer) error {
 	return err
 }
 
+func validateNetworkCommand(arguments []string) error {
+	switch arguments[0] {
+	case "list":
+		if len(arguments) != 1 {
+			return errors.New("usage: artifact list")
+		}
+	case "inspect":
+		if len(arguments) != 2 {
+			return errors.New("usage: artifact inspect <name>")
+		}
+	case "delete":
+		if len(arguments) != 2 {
+			return errors.New("usage: artifact delete <name>")
+		}
+	case "version":
+		if len(arguments) < 2 {
+			return errors.New("usage: artifact version <list|delete> [arguments]")
+		}
+		switch arguments[1] {
+		case "list":
+			if len(arguments) != 3 {
+				return errors.New("usage: artifact version list <name>")
+			}
+		case "delete":
+			if len(arguments) != 4 {
+				return errors.New("usage: artifact version delete <name> <version-id>")
+			}
+		default:
+			return fmt.Errorf("unknown version command %q", arguments[1])
+		}
+	case "publish":
+		_, _, err := parsePublishArguments(arguments[1:])
+		return err
+	default:
+		return fmt.Errorf("unknown command %q", arguments[0])
+	}
+	return nil
+}
+
 func parsePublishArguments(arguments []string) (string, string, error) {
 	var path string
 	var name string
@@ -156,9 +204,31 @@ func parsePublishArguments(arguments []string) (string, string, error) {
 	return path, name, nil
 }
 
-func serviceURL() string {
-	if value := os.Getenv("_ARTIFACT_SERVICE_URL"); value != "" {
-		return value
+func executeConfig(arguments []string, stdout io.Writer) error {
+	if len(arguments) == 1 && arguments[0] == "get-url" {
+		serviceURL, err := serviceURL()
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(stdout, serviceURL)
+		return err
 	}
-	return defaultServiceURL
+	if len(arguments) == 2 && arguments[0] == "set-url" {
+		return cliconfig.Write(cliconfig.Config{ServiceURL: arguments[1]})
+	}
+	return errors.New("usage: artifact config <get-url|set-url> [url]")
+}
+
+func serviceURL() (string, error) {
+	if value := os.Getenv("ARTIFACT_SERVICE_URL"); value != "" {
+		return value, nil
+	}
+	config, err := cliconfig.Read()
+	if err != nil {
+		return "", err
+	}
+	if config.ServiceURL == "" {
+		return "", errors.New("service_url is missing from the artifact config")
+	}
+	return config.ServiceURL, nil
 }

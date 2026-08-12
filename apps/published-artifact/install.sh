@@ -53,7 +53,7 @@ fi
 asset_api_url=$(
   printf '%s\n' "$release_json" |
     awk -v asset="$asset" '
-      /"url":[[:space:]]*"https:\/\/api.github.com\/repos\/[^\"]+\/releases\/assets\/[0-9]+"/ {
+      /"url":[[:space:]]*"https:\/\/api.github.com\/repos\/[^"]+\/releases\/assets\/[0-9]+"/ {
         url = $0
         sub(/^.*"url":[[:space:]]*"/, "", url)
         sub(/".*$/, "", url)

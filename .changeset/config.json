@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "eli0shin/proxmox-config"
+      "repo": "eli0shin/artifacts"
     }
   ],
   "commit": false,

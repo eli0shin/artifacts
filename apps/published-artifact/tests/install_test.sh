@@ -57,7 +57,7 @@ output=$(HOME="$temporary_directory/home" \
 expected=$(cat <<EOF
 Detected: linux-x64
 Installing to: $temporary_directory/home/.local/bin/artifact
-Downloading from: https://github.com/eli0shin/proxmox-config/releases/download/artifact-v1.2.3/artifact-linux-x64
+Downloading from: https://github.com/eli0shin/artifacts/releases/download/artifact-v1.2.3/artifact-linux-x64
 Installed artifact to $temporary_directory/home/.local/bin/artifact
 
 Add this to your shell profile to use artifact:
@@ -68,7 +68,7 @@ EOF
   printf 'unexpected installer output:\n%s\n' "$output" >&2
   exit 1
 }
-[[ $(<"$temporary_directory/curl-url") == "https://github.com/eli0shin/proxmox-config/releases/download/artifact-v1.2.3/artifact-linux-x64" ]]
+[[ $(<"$temporary_directory/curl-url") == "https://github.com/eli0shin/artifacts/releases/download/artifact-v1.2.3/artifact-linux-x64" ]]
 [[ -x "$temporary_directory/home/.local/bin/artifact" ]]
 [[ $("$temporary_directory/home/.local/bin/artifact") == "artifact installed" ]]
 

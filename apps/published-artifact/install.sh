@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repository="eli0shin/proxmox-config"
+repository="eli0shin/artifacts"
 install_directory="${HOME}/.local/bin"
 binary_name="artifact"
 

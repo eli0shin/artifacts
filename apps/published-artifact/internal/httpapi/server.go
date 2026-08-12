@@ -15,8 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/names"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/store"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/names"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/store"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

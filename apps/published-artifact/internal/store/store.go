@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/archive"
-	artifactnames "github.com/eli0shin/proxmox-config/apps/published-artifact/internal/names"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/store/catalogdb"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/archive"
+	artifactnames "github.com/eli0shin/artifacts/apps/published-artifact/internal/names"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/store/catalogdb"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

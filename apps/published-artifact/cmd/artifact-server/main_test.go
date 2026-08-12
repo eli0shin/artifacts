@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+func TestPublicBaseURLIsRequired(t *testing.T) {
+	t.Setenv("ARTIFACT_PUBLIC_BASE_URL", "")
+	defer func() {
+		if recover() == nil {
+			t.Fatal("mustGetenv did not panic")
+		}
+	}()
+	mustGetenv("ARTIFACT_PUBLIC_BASE_URL")
+}
+
 func TestHTTPServerBoundsTotalUploadTime(t *testing.T) {
 	t.Setenv("ARTIFACT_UPLOAD_TIMEOUT", "1h")
 

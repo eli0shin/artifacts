@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/httpapi"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/store"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/httpapi"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/store"
 )
 
 var artifactBinary string

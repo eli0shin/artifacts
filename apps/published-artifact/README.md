@@ -16,7 +16,7 @@ The server uses these environment variables:
 | Variable | Default |
 | --- | --- |
 | `ARTIFACT_LISTEN_ADDR` | `:8080` |
-| `ARTIFACT_PUBLIC_BASE_URL` | `https://artifacts.home.arpa` |
+| `ARTIFACT_PUBLIC_BASE_URL` | Required |
 | `ARTIFACT_DATABASE_PATH` | `/var/lib/artifact/database/artifacts.db` |
 | `ARTIFACT_VERSIONS_PATH` | `/var/lib/artifact/versions` |
 | `ARTIFACT_UPLOAD_TIMEOUT` | `1h` |
@@ -55,7 +55,7 @@ The static tree is available below `/{name}/`. Artifact Name lookup is case-inse
 Install or upgrade the `artifact` CLI independently of this repository on Linux or macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/eli0shin/proxmox-config/main/apps/published-artifact/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/eli0shin/artifacts/main/apps/published-artifact/install.sh | bash
 ```
 
 The installer selects the current Linux or macOS x64 or arm64 release asset and installs it at `$HOME/.local/bin/artifact`. Add `$HOME/.local/bin` to `PATH` if the installer reports that it is missing.

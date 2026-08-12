@@ -1,5 +1,5 @@
 {
-  "name": "proxmox-config-release-tools",
+  "name": "artifacts-release-tools",
   "private": true,
   "workspaces": [
     "apps/published-artifact"

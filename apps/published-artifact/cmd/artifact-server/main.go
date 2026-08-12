@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/httpapi"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/store"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/telemetry"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/httpapi"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/store"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -45,6 +45,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
+	publicBaseURL := mustGetenv("ARTIFACT_PUBLIC_BASE_URL")
 	catalog, err := store.Open(ctx,
 		getenv("ARTIFACT_DATABASE_PATH", "/var/lib/artifact/database/artifacts.db"),
 		getenv("ARTIFACT_VERSIONS_PATH", "/var/lib/artifact/versions"),
@@ -54,7 +55,7 @@ func run(ctx context.Context) error {
 	}
 	defer catalog.Close()
 
-	application := httpapi.New(catalog, getenv("ARTIFACT_PUBLIC_BASE_URL", "https://artifacts.home.arpa"))
+	application := httpapi.New(catalog, publicBaseURL)
 	server, err := newHTTPServer(otelhttp.NewHandler(application, "artifact-server.request"))
 	if err != nil {
 		return err
@@ -114,4 +115,12 @@ func getenv(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func mustGetenv(name string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		panic(name + " is required")
+	}
+	return value
 }

@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/apiclient"
-	"github.com/eli0shin/proxmox-config/apps/published-artifact/internal/sourcearchive"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/apiclient"
+	"github.com/eli0shin/artifacts/apps/published-artifact/internal/sourcearchive"
 )
 
 const defaultServiceURL = "https://artifacts.home.arpa"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repository=${GITHUB_REPOSITORY:-eli0shin/proxmox-config}
+repository=${GITHUB_REPOSITORY:-eli0shin/artifacts}
 version=$(node -p "require('./apps/published-artifact/package.json').version")
 tag="artifact-v${version}"
 

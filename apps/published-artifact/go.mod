@@ -1,4 +1,4 @@
-module github.com/eli0shin/proxmox-config/apps/published-artifact
+module github.com/eli0shin/artifacts/apps/published-artifact
 
 go 1.24
 

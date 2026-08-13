@@ -79,10 +79,11 @@ artifact inspect <name>
 artifact delete <name>
 artifact version list <name>
 artifact version delete <name> <version-id>
+artifact --help
 artifact --version
 ```
 
-`publish` prints the resulting URL. List and inspection commands use stable tab-separated output. Successful deletion commands print nothing.
+`--help` prints the available commands. Each command also accepts `--help`. `publish` prints the resulting URL. List and inspection commands use stable tab-separated output. Successful deletion commands print nothing.
 
 The CLI has a separate semantic release stream with Git tags such as `artifact-v1.2.3` and four raw GitHub Release binaries for Linux and macOS on x64 and arm64.
 

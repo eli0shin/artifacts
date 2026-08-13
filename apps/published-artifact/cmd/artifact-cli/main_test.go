@@ -95,10 +95,10 @@ func TestNetworkCommandRequiresServiceURL(t *testing.T) {
 func TestInvalidCommandDoesNotRequireConfiguration(t *testing.T) {
 	t.Setenv("ARTIFACT_CONFIG_PATH", filepath.Join(t.TempDir(), "missing.json"))
 	t.Setenv("ARTIFACT_SERVICE_URL", "")
-	if err := execute(t.Context(), []string{"unknown"}, io.Discard); err == nil || err.Error() != `unknown command "unknown"` {
+	if err := execute(t.Context(), []string{"unknown"}, io.Discard); err == nil || err.Error() != `unknown command "unknown" for "artifact"` {
 		t.Fatalf("unknown command error = %v", err)
 	}
-	if err := execute(t.Context(), []string{"list", "extra"}, io.Discard); err == nil || err.Error() != "usage: artifact list" {
+	if err := execute(t.Context(), []string{"list", "extra"}, io.Discard); err == nil || err.Error() != `unknown command "extra" for "artifact list"` {
 		t.Fatalf("invalid list error = %v", err)
 	}
 }
@@ -265,13 +265,38 @@ func TestVersionFlagsAndCommandErrorsHaveCompleteOutput(t *testing.T) {
 	}
 
 	stdout, stderr, status := runArtifact(t, "http://unused.invalid")
-	if stdout != "" || stderr != "artifact: usage: artifact <command> [arguments]\n" || status == 0 {
+	if !strings.Contains(stdout, "Usage:\n  artifact [command]") || stderr != "" || status != 0 {
 		t.Fatalf("artifact without command = stdout %q, stderr %q, status %d", stdout, stderr, status)
 	}
 
 	stdout, stderr, status = runArtifact(t, "http://unused.invalid", "publish", "source", "--unknown")
-	if stdout != "" || stderr != "artifact: unknown option \"--unknown\"\n" || status == 0 {
+	if stdout != "" || stderr != "artifact: unknown flag: --unknown\n" || status == 0 {
 		t.Fatalf("artifact with unknown option = stdout %q, stderr %q, status %d", stdout, stderr, status)
+	}
+}
+
+func TestHelpFlagsPrintCommandHelpWithoutConfiguration(t *testing.T) {
+	t.Setenv("ARTIFACT_CONFIG_PATH", filepath.Join(t.TempDir(), "missing.json"))
+	t.Setenv("ARTIFACT_SERVICE_URL", "")
+
+	checks := []struct {
+		arguments []string
+		contains  []string
+	}{
+		{[]string{"--help"}, []string{"Usage:\n  artifact [command]", "-h, --help"}},
+		{[]string{"publish", "--help"}, []string{"artifact publish <path>", "--name string"}},
+		{[]string{"version", "delete", "--help"}, []string{"artifact version delete <name> <version-id>"}},
+	}
+	for _, check := range checks {
+		var stdout strings.Builder
+		if err := execute(t.Context(), check.arguments, &stdout); err != nil {
+			t.Fatalf("artifact %v: %v", check.arguments, err)
+		}
+		for _, expected := range check.contains {
+			if !strings.Contains(stdout.String(), expected) {
+				t.Errorf("artifact %v output %q does not contain %q", check.arguments, stdout.String(), expected)
+			}
+		}
 	}
 }
 

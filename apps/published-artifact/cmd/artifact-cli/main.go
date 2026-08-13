@@ -12,6 +12,7 @@ import (
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/apiclient"
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/cliconfig"
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/sourcearchive"
+	"github.com/spf13/cobra"
 )
 
 var version = "dev"
@@ -26,13 +27,114 @@ func main() {
 }
 
 func execute(ctx context.Context, arguments []string, stdout io.Writer) error {
-	if len(arguments) == 1 && (arguments[0] == "--version" || arguments[0] == "-v") {
-		_, err := fmt.Fprintf(stdout, "artifact %s\n", version)
-		return err
+	if len(arguments) == 1 && arguments[0] == "-v" {
+		arguments = []string{"--version"}
 	}
-	if len(arguments) == 0 {
-		return errors.New("usage: artifact <command> [arguments]")
+	command := newRootCommand(stdout)
+	command.SetArgs(arguments)
+	return command.ExecuteContext(ctx)
+}
+
+func newRootCommand(stdout io.Writer) *cobra.Command {
+	root := &cobra.Command{
+		Use:           "artifact",
+		Short:         "Publish and manage Artifacts",
+		Version:       version,
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
+	root.SetOut(stdout)
+	root.SetVersionTemplate("artifact {{.Version}}\n")
+	root.CompletionOptions.DisableDefaultCmd = true
+
+	publish := &cobra.Command{
+		Use:   "publish <path>",
+		Short: "Publish a file or directory",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, arguments []string) error {
+			name, err := command.Flags().GetString("name")
+			if err != nil {
+				return err
+			}
+			commandArguments := []string{"publish", arguments[0]}
+			if name != "" {
+				commandArguments = append(commandArguments, "--name", name)
+			}
+			return runCommand(command.Context(), commandArguments, stdout)
+		},
+	}
+	publish.Flags().String("name", "", "Artifact name")
+
+	list := &cobra.Command{
+		Use:   "list",
+		Short: "List Artifacts",
+		Args:  cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			return runCommand(command.Context(), []string{"list"}, stdout)
+		},
+	}
+	inspect := &cobra.Command{
+		Use:   "inspect <name>",
+		Short: "Inspect an Artifact",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, arguments []string) error {
+			return runCommand(command.Context(), []string{"inspect", arguments[0]}, stdout)
+		},
+	}
+	deleteArtifact := &cobra.Command{
+		Use:   "delete <name>",
+		Short: "Delete an Artifact",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, arguments []string) error {
+			return runCommand(command.Context(), []string{"delete", arguments[0]}, stdout)
+		},
+	}
+
+	versionCommand := &cobra.Command{Use: "version", Short: "Manage retained Versions"}
+	versionCommand.AddCommand(
+		&cobra.Command{
+			Use:   "list <name>",
+			Short: "List retained Versions",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(command *cobra.Command, arguments []string) error {
+				return runCommand(command.Context(), []string{"version", "list", arguments[0]}, stdout)
+			},
+		},
+		&cobra.Command{
+			Use:   "delete <name> <version-id>",
+			Short: "Delete a retained Version",
+			Args:  cobra.ExactArgs(2),
+			RunE: func(command *cobra.Command, arguments []string) error {
+				return runCommand(command.Context(), []string{"version", "delete", arguments[0], arguments[1]}, stdout)
+			},
+		},
+	)
+
+	config := &cobra.Command{Use: "config", Short: "Manage CLI configuration"}
+	config.AddCommand(
+		&cobra.Command{
+			Use:   "get-url",
+			Short: "Print the Artifact service URL",
+			Args:  cobra.NoArgs,
+			RunE: func(_ *cobra.Command, _ []string) error {
+				return executeConfig([]string{"get-url"}, stdout)
+			},
+		},
+		&cobra.Command{
+			Use:   "set-url <url>",
+			Short: "Set the Artifact service URL",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(_ *cobra.Command, arguments []string) error {
+				return executeConfig([]string{"set-url", arguments[0]}, stdout)
+			},
+		},
+	)
+
+	root.AddCommand(publish, list, inspect, deleteArtifact, versionCommand, config)
+	return root
+}
+
+func runCommand(ctx context.Context, arguments []string, stdout io.Writer) error {
 	if arguments[0] == "config" {
 		return executeConfig(arguments[1:], stdout)
 	}

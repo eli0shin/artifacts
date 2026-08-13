@@ -1,5 +1,11 @@
 # artifact
 
+## 0.3.0
+
+### Minor Changes
+
+- [#2](https://github.com/eli0shin/artifacts/pull/2) [`622ccdd`](https://github.com/eli0shin/artifacts/commit/622ccdd2b2e0779b5fe8384aef8e91158204f338) Thanks [@eli0shin](https://github.com/eli0shin)! - Add Cobra-based command and subcommand help to the `artifact` CLI.
+
 ## 0.2.0
 
 ### Minor Changes

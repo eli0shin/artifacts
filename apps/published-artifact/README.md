@@ -48,7 +48,9 @@ Management responses use JSON. A publication and an Artifact inspection return:
 }
 ```
 
-The static tree is available below `/{name}/`. Artifact Name lookup is case-insensitive. Paths inside one Artifact Version are case-sensitive. Static responses use `Cache-Control: no-store`.
+The Artifact Directory is available at `/`. It lists all current Artifacts alphabetically and opens each Artifact in a new browser tab.
+
+The static tree is available below `/{name}/`. Artifact Name lookup is case-insensitive. Paths inside one Artifact Version are case-sensitive. Directory and static responses use `Cache-Control: no-store`.
 
 ## CLI
 

@@ -17,6 +17,62 @@ import (
 	"github.com/eli0shin/artifacts/apps/published-artifact/internal/store"
 )
 
+func TestArtifactDirectoryShowsEmptyState(t *testing.T) {
+	handler := newTestHandler(t)
+
+	response := request(t, handler, http.MethodGet, "/", nil)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("directory status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if response.Header().Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("Content-Type = %q, want text/html; charset=utf-8", response.Header().Get("Content-Type"))
+	}
+	if response.Header().Get("Cache-Control") != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store", response.Header().Get("Cache-Control"))
+	}
+	body := response.Body.String()
+	for _, expected := range []string{"<h1>Artifacts</h1>", "No artifacts have been published yet."} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("directory body does not contain %q", expected)
+		}
+	}
+	if strings.Contains(body, "0 published artifacts") {
+		t.Error("directory shows an Artifact count")
+	}
+}
+
+func TestArtifactDirectoryListsArtifactsAlphabeticallyWithPublicationTimes(t *testing.T) {
+	handler := newTestHandler(t)
+	publish(t, handler, "Zulu", map[string]string{"index.html": "last"})
+	publish(t, handler, "Alpha", map[string]string{"index.html": "first"})
+
+	response := request(t, handler, http.MethodGet, "/", nil)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("directory status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	body := response.Body.String()
+	alpha := strings.Index(body, `href="https://artifacts.home.arpa/alpha/"`)
+	zulu := strings.Index(body, `href="https://artifacts.home.arpa/zulu/"`)
+	if alpha < 0 || zulu < 0 || alpha >= zulu {
+		t.Fatalf("directory entries are missing or not alphabetical: alpha=%d zulu=%d", alpha, zulu)
+	}
+	for _, expected := range []string{
+		`target="_blank"`,
+		`rel="noopener"`,
+		`<time datetime="`,
+		` UTC</time>`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("directory body does not contain %q", expected)
+		}
+	}
+	if strings.Contains(body, "current_version_id") {
+		t.Error("directory exposes a Version ID")
+	}
+}
+
 func TestGracefulDrainBecomesUnreadyAndRejectsNewPublications(t *testing.T) {
 	server := newTestHandler(t)
 	server.Drain()

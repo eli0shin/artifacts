@@ -99,6 +99,7 @@ type artifactResponse struct {
 func New(catalog *store.Store, publicURL string) *Server {
 	s := &Server{store: catalog, publicURL: strings.TrimRight(publicURL, "/")}
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", s.handleArtifactDirectory)
 	mux.HandleFunc("GET /livez", s.handleLive)
 	mux.HandleFunc("GET /readyz", s.handleReady)
 	mux.HandleFunc("POST /api/v1/artifacts", s.handlePublish)
@@ -223,6 +224,26 @@ func (s *Server) monitorPublicationAttempt(ctx context.Context, name, token stri
 			}
 		}
 	}
+}
+
+func (s *Server) handleArtifactDirectory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	artifacts, err := s.store.ListArtifacts(r.Context())
+	if err != nil {
+		http.Error(w, "Artifact directory failed", http.StatusInternalServerError)
+		return
+	}
+	response := make([]artifactResponse, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		response = append(response, s.artifactResponse(artifact))
+	}
+	page, err := renderArtifactDirectory(response)
+	if err != nil {
+		http.Error(w, "Artifact directory failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(page)
 }
 
 func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
